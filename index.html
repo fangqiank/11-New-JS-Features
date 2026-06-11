@@ -430,14 +430,19 @@
           });
       }
 
-      // 04 - Import Attributes（模拟演示）
+      // 04 - Import Attributes（动态 import 演示）
       function demoImportAttributes() {
-        // 真实场景：import data from './config.json' with { type: 'json' };
-        // 这里用代码展示语法
-        const code = `// 原生支持导入 JSON（需模块环境 + 服务器）
-        // import config from './data.json' with { type: 'json' };
-        // console.log(config);`;
-        return "⚠️ 此特性需在模块环境运行，详见代码注释。语法已可在 Chrome/Node 中使用。";
+        // 使用动态 import() 演示 Import Attributes
+        return import('./data.json', { with: { type: 'json' } })
+          .then(mod => ({
+            语法: 'import config from "./data.json" with { type: "json" }',
+            导入的数据: mod.default,
+            说明: '导入的 JSON 被解析为默认导出，属性会被静态类型检查',
+          }))
+          .catch(err => ({
+            error: err.message,
+            hint: '需要 HTTP 服务器环境 + Chrome 123+ / Node 21+',
+          }));
       }
 
       // 05 - RegExp.escape
@@ -644,10 +649,10 @@
         {
           number: 4,
           title: "Import Attributes",
-          code: `// 原生导入 JSON（模块环境）
-        import config from './data.json'
-          with { type: 'json' };
-        // 未来可能支持 CSS 等`,
+          code: `// 动态 import() + Import Attributes
+        const config = await import('./data.json',
+          { with: { type: 'json' } });
+        console.log(config.default);`,
           run: demoImportAttributes,
           note: "Chrome 123+, Node 21+",
         },

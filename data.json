@@ -1,0 +1,7 @@
+{
+  "site": "现代 JavaScript 新特性演示",
+  "version": "1.0.0",
+  "features": 11,
+  "browsers": ["Chrome 123+", "Edge 123+", "Node 21+"],
+  "status": "active"
+}
