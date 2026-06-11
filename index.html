@@ -407,27 +407,35 @@
 
       // 03 - Promise.try
       function demoPromiseTry() {
-        // 模拟：展示 Promise.try 统一处理同步/异步错误
-        const output = [];
         if (typeof Promise.try !== 'function') {
           return "⚠️ Promise.try 在当前浏览器中不可用（Chrome 128+, Node 22+）";
         }
-        return Promise.try(() => {
-          // 可能是同步抛错，也可能是异步
-          const risky =
-            Math.random() > 0.5
-              ? JSON.parse('{"valid": true}')
-              : JSON.parse("{invalid}");
-          return risky;
-        })
-          .then((data) => {
-            output.push("成功: " + JSON.stringify(data));
-            return output.join(" | ");
-          })
-          .catch((err) => {
-            output.push("捕获错误: " + err.message);
-            return output.join(" | ");
-          });
+
+        // 场景 A: Promise.try 包装同步函数，抛错自动进 .catch
+        const syncOk = Promise.try(() => JSON.parse('{"valid": true}'))
+          .then(data => data);
+        const syncErr = Promise.try(() => JSON.parse('{invalid}'))
+          .catch(err => '\u2716 同步抛错被 Promise.try 转入 .catch: ' + err.message);
+
+        // 场景 B: 普通 try-catch（需要写两套错误处理）
+        function tryCatchVersion() {
+          try {
+            const data = JSON.parse('{"valid": true}');
+            return Promise.resolve(data);
+          } catch (err) {
+            return Promise.reject(err);
+          }
+        }
+
+        // 同时展示两个场景
+        return Promise.all([syncOk, syncErr])
+          .then(([ok, err]) => ({
+            'Promise.try': {
+              '\u2705 同步成功': ok,
+              '\u2716 同步抛错': err,
+            },
+            '对比': 'Promise.try 省去了手动 try-catch 包装，同步抛错自动进入 .catch 链',
+          }));
       }
 
       // 04 - Import Attributes（动态 import 演示）
@@ -636,12 +644,13 @@
         {
           number: 3,
           title: "Promise.try",
-          code: `Promise.try(() => {
-          // 同步抛错也会进入 .catch
-          return JSON.parse('{invalid}');
-        })
-        .then(handle)
-        .catch(handleError)`,
+          code: `// 同步函数抛错，无需 try-catch 包装
+Promise.try(() => JSON.parse('{invalid}'))
+  .catch(err => console.error(err));
+
+// 等价的普通写法（多一层嵌套）
+try { JSON.parse('{invalid}'); }
+catch(err) { Promise.reject(err); }`,
           run: demoPromiseTry,
           note: "Chrome 128+, Node 22+",
         },
