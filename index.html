@@ -125,7 +125,7 @@
         color: #a5b4fc;
         overflow-x: auto;
         white-space: pre-wrap;
-        word-break: break-all;
+        overflow-wrap: anywhere;
         margin-bottom: 1rem;
         flex-grow: 1;
         border: 1px solid var(--border);
@@ -140,7 +140,7 @@
         color: var(--success);
         border-left: 3px solid var(--success);
         min-height: 2.5rem;
-        word-break: break-all;
+        overflow-wrap: anywhere;
       }
 
       .demo-card__output.error {
@@ -333,7 +333,17 @@
             outputEl.className = "demo-card__output";
             try {
               const result = runFn();
-              if (result !== undefined) {
+              if (result !== undefined && typeof result === 'object' && typeof result.then === 'function') {
+                outputEl.textContent = "⏳ 运行中...";
+                result.then(actualResult => {
+                  outputEl.textContent = typeof actualResult === "string"
+                    ? actualResult
+                    : JSON.stringify(actualResult, null, 2);
+                }).catch(err => {
+                  outputEl.className = "demo-card__output error";
+                  outputEl.textContent = `❌ 错误: ${err.message}`;
+                });
+              } else if (result !== undefined) {
                 outputEl.textContent =
                   typeof result === "string"
                     ? result
@@ -399,6 +409,9 @@
       function demoPromiseTry() {
         // 模拟：展示 Promise.try 统一处理同步/异步错误
         const output = [];
+        if (typeof Promise.try !== 'function') {
+          return "⚠️ Promise.try 在当前浏览器中不可用（Chrome 128+, Node 22+）";
+        }
         return Promise.try(() => {
           // 可能是同步抛错，也可能是异步
           const risky =
@@ -735,7 +748,7 @@
 
       // 自动运行异步示例（Array.fromAsync）
       setTimeout(() => {
-        const asyncOutput = document.getElementById("output-06");
+        const asyncOutput = document.getElementById("output-6");
         if (asyncOutput) {
           asyncOutput.textContent = "⏳ 异步运行中...";
           demoArrayFromAsync()
@@ -755,6 +768,9 @@
 
         // 转义 HTML 特殊字符（保留 markdown 语法字符）
         html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // 移除 Windows CRLF 中的 \r
+        html = html.replace(/\r/g, '');
 
         // 代码块 ```...```
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
@@ -778,6 +794,17 @@
 
         // 行内代码（需在代码块处理之后）
         html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // 无序列表
+        html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+        // 有序列表
+        html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+        // 包裹连续的 li 成 ul/ol 块
+        html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => {
+          const isOrdered = !!match.match(/^\d+\./m) && !match.match(/^[-*]/m);
+          const tag = isOrdered ? 'ol' : 'ul';
+          return `<${tag}>${match}</${tag}>`;
+        });
 
         // 段落：连续非空行且非标签行
         html = html.replace(/^(?!<[a-z]|$)((?:.+\n?)+)/gm, (match) => {
@@ -805,7 +832,7 @@
         })
         .catch(err => {
           document.getElementById('markdown-content').innerHTML =
-            `<p style="color:var(--error);">加载文档失败: ${err.message}</p>`;
+            `<p style="color:var(--error);">加载文档失败: ${err.message}（提示：请通过 HTTP 服务器打开页面，如 <code>npx serve</code> 或 <code>python -m http.server</code>）</p>`;
         });
 
       console.log("🚀 现代 JS 特性演示页面已就绪");
