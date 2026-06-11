@@ -46,16 +46,21 @@ counter()
 
 ## 03 - Promise.try
 
-通过一个可能抛出同步错误的函数，演示了如何用 `Promise.try` 统一同步和异步错误，让错误处理路径更一致。
+`Promise.try` 能将同步函数中抛出的错误自动转为 rejected Promise，统一错误处理路径。
+
+与手动 `try-catch` 包装相比，`Promise.try` 让代码更简洁，同步抛错和异步 reject 都能被同一段 `.catch` 处理。
 
 ```js
-Promise.try(() => {
-  // 同步抛错也会进入 .catch
-  return JSON.parse('{invalid}');
-})
-.then(handle)
-.catch(handleError);
+// Promise.try 版本（推荐）
+Promise.try(() => JSON.parse('{invalid}'))
+  .catch(err => console.error(err));
+
+// 等价的普通写法（多一层嵌套）
+try { JSON.parse('{invalid}'); }
+catch(err) { Promise.reject(err); }
 ```
+
+点击卡片按钮会同时展示成功和失败两条路径，方便对比。
 
 > Chrome 128+, Node 22+
 
@@ -63,15 +68,15 @@ Promise.try(() => {
 
 ## 04 - Import Attributes
 
-在代码示例和注释中说明了 `import ... with { type: "json" }` 的语法，强调原生导入 JSON 的能力，并提示未来可扩展至 CSS 等资源。
+`import attributes` 允许在导入语句中声明模块类型，比如 `type: "json"`。在模块环境中可以用静态导入，在普通脚本中用动态 `import()` 配合 `{ with: { type: 'json' } }` 实现同样功能。
 
 ```js
-// 原生导入 JSON（模块环境）
-import config from './data.json'
-  with { type: 'json' };
-
-// 未来可能支持 CSS 等资源类型
+// 动态 import() 方式（普通脚本和模块都可使用）
+const config = await import('./data.json',
+  { with: { type: 'json' } });
 ```
+
+页面中的卡片使用动态 `import()` 实际加载了 `data.json`，展示了导入结果包含的数据内容。
 
 > Chrome 123+, Node 21+
 
@@ -176,6 +181,8 @@ class Connection {
 using conn = new Connection();
 // 离开作用域自动调用 dispose
 ```
+
+页面中模拟了 `using` 的效果（通过 `try/finally` 手动调用 `[Symbol.dispose]`），展示了资源从创建到自动清理的完整生命周期。
 
 > Chrome 125+, Safari 待支持
 
